@@ -28,19 +28,20 @@ export struct MatrixEditor {
         // 表头行
         Row() {
           Blank()
-            .width(40)
-            .height(25)
+            .width(42)
+            .height(32)
 
           ForEach(this.cityNames, (cityName: string, index: number) => {
             Text(cityName && cityName.length > 3 ? cityName.substring(0, 3) : (cityName || ''))
               .fontSize(8)
               .fontWeight(FontWeight.Medium)
-              .width(45)
-              .height(25)
+              .width(46)
+              .height(32)
               .textAlign(TextAlign.Center)
               .backgroundColor('#F0F0F0')
               .borderRadius(3)
               .margin(1)
+
           })
         }
         .width('100%')
@@ -54,7 +55,7 @@ export struct MatrixEditor {
               .fontSize(8)
               .fontWeight(FontWeight.Medium)
               .width(40)
-              .height(25)
+              .height(32)
               .textAlign(TextAlign.Center)
               .backgroundColor('#F0F0F0')
               .borderRadius(3)
@@ -70,10 +71,11 @@ export struct MatrixEditor {
                 .key(`cell-${rowIndex}-${colIndex}-${this.refreshKey}`) // 添加 key 确保更新
                 .enabled(rowIndex !== colIndex)
                 .width(45)
-                .height(25)
-                .fontSize(8)
+                .height(32)
+                .fontSize(10)
                 .textAlign(TextAlign.Center)
                 .backgroundColor('#FFFFFF')
+                .margin(1)
                 .border({
                   width: 1,
                   color: '#E0E0E0',

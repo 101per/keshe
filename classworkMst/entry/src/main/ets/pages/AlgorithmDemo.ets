@@ -44,8 +44,10 @@ interface MatrixEditorProps {
 // GraphVisualizer组件props接口
 interface GraphVisualizerProps {
   cityNames: string[];
-  allEdges: Edge[];
+  allEdges: Edge[]; 
   mstEdges: Edge[];
+  isAnimating: boolean;
+  currentStep: number;
 }
 
 @Component
@@ -70,9 +72,14 @@ export struct AlgorithmDemo {
   @State allEdges: Edge[] = [];
   // 组件刷新计数器
   @State refreshCounter: number = 0;
-  
+    
   // 图可视化组件的显隐控制
   @State graphVisible: boolean = true;
+    
+  // 动画相关状态
+  @State isAnimating: boolean = false;
+  @State currentStep: number = 0;
+  @State animationSteps: Edge[] = [];
 
   // 算法选项
   private algorithmOptions: SelectOption[] = [
@@ -139,6 +146,11 @@ export struct AlgorithmDemo {
     this.updateAllEdges();
     this.showResultPanel = false; // 隐藏结果面板
     
+    // 重置动画状态
+    this.isAnimating = false;
+    this.currentStep = 0;
+    this.animationSteps = [];
+    
     // 强制刷新组件 - 通过显隐控制强制重新渲染
     this.graphVisible = false;
     
@@ -154,6 +166,14 @@ export struct AlgorithmDemo {
     // 重新初始化图数据
     this.initializeGraph();
     this.showResultPanel = false;
+
+    // 清空MST结果
+    this.mstEdges = [];
+
+    // 重置动画状态
+    this.isAnimating = false;
+    this.currentStep = 0;
+    this.animationSteps = [];
 
     // 强制刷新组件 - 通过显隐控制强制重新渲染
     this.graphVisible = false;
@@ -191,6 +211,11 @@ export struct AlgorithmDemo {
       this.mstEdges = result.edges;
       this.totalCost = result.cost;
       this.showResultPanel = true;
+      
+      // 更新动画步骤
+      this.animationSteps = [...result.edges];
+      this.currentStep = 0;
+      // 注意：不改变 isAnimating 状态，允许用户之后播放动画
       
       // 强制刷新组件 - 通过显隐控制强制重新渲染
       this.graphVisible = false;
@@ -250,6 +275,14 @@ export struct AlgorithmDemo {
         this.startNodeValue = '0';
         this.startNodeIndex = 0;
         
+        // 清空MST结果
+        this.mstEdges = [];
+        
+        // 重置动画状态
+        this.isAnimating = false;
+        this.currentStep = 0;
+        this.animationSteps = [];
+        
         // 强制刷新组件 - 通过显隐控制强制重新渲染
         this.graphVisible = false;
         
@@ -277,6 +310,60 @@ export struct AlgorithmDemo {
     }
   }
 
+  // 开始动画演示
+  private startAnimation(): void {
+    
+    this.animationSteps = [...this.mstEdges];
+    this.currentStep = 0;
+    this.isAnimating = true;
+    
+    // 强制刷新组件以开始动画
+    this.graphVisible = false;
+    
+    // 短暂延迟后重新显示，确保组件完全重建
+    setTimeout(() => {
+      this.graphVisible = true;
+    }, 10);
+  }
+  
+  // 执行下一步
+  private nextStep(): void {
+    if (!this.isAnimating || this.currentStep >= this.animationSteps.length) {
+      if (this.currentStep >= this.animationSteps.length) {
+        promptAction.showToast({
+          message: '动画演示已完成',
+          duration: 1500
+        });
+      }
+      return;
+    }
+    
+    // 更新当前步骤
+    this.currentStep++;
+    
+    // 强制刷新组件以显示下一步
+    this.graphVisible = false;
+    
+    // 短暂延迟后重新显示，确保组件完全重建
+    setTimeout(() => {
+      this.graphVisible = true;
+    }, 10);
+  }
+  
+  // 重置动画
+  private resetAnimation(): void {
+    this.isAnimating = false;
+    this.currentStep = 0;
+    
+    // 强制刷新组件以更新显示
+    this.graphVisible = false;
+    
+    // 短暂延迟后重新显示，确保组件完全重建
+    setTimeout(() => {
+      this.graphVisible = true;
+    }, 10);
+  }
+  
   // 构建起始节点选择项数组
   private getStartNodeOptions(): SelectOption[] {
     const options: SelectOption[] = [];
@@ -353,35 +440,18 @@ export struct AlgorithmDemo {
               .margin({ right: 10 })
               .backgroundColor('#52C41A')
               .fontColor('#FFFFFF')
-              .fontSize(14)
-              .width(160)
-              .height(40)
+              .fontSize(18)
+              .width(200)
+              .height(50)
 
-            Button('执行')
+            Button('执行算法')
               .onClick(() => this.executeAlgorithm())
               .margin({ right: 10 })
               .backgroundColor('#1890FF')
               .fontColor('#FFFFFF')
-              .fontSize(14)
-              .width(80)
-              .height(40)
-
-            Button('保存')
-              .onClick(() => this.saveGraph())
-              .margin({ right: 10 })
-              .backgroundColor('#FAAD14')
-              .fontColor('#FFFFFF')
-              .fontSize(14)
-              .width(80)
-              .height(40)
-
-            Button('加载')
-              .onClick(() => this.loadGraph())
-              .backgroundColor('#722ED1')
-              .fontColor('#FFFFFF')
-              .fontSize(14)
-              .width(80)
-              .height(40)
+              .fontSize(18)
+              .width(200)
+              .height(50)
           }
           .width('100%')
           .justifyContent(FlexAlign.Start)
@@ -407,7 +477,7 @@ export struct AlgorithmDemo {
               onChange: (matrix: number[][]) => this.handleMatrixChange(matrix)
             })
               .key('matrix-' + this.refreshCounter)
-              .height(250)
+              .height(330)
           }
           .width('100%')
           .margin({ bottom: 20 })
@@ -421,14 +491,64 @@ export struct AlgorithmDemo {
                 .margin({ bottom: 10 })
                 .fontColor('#1890FF')
 
+              // 动画控制按钮
+              Row() {
+                Button('开始演示')
+                  .onClick(() => {
+                    if (this.mstEdges.length === 0) {
+                      promptAction.showToast({
+                        message: '请先执行算法生成MST',
+                        duration: 2000
+                      });
+                    } else {
+                      this.startAnimation();
+                    }
+                  })
+                  .margin({ right: 10 })
+                  .backgroundColor(this.mstEdges.length === 0 ? '#CCCCCC' : '#1890FF')
+                  .fontColor('#FFFFFF')
+                  .fontSize(12)
+                  .width(80)
+                  .height(45)
+
+                Button('下一步')
+                  .onClick(() => this.nextStep())
+                  .margin({ right: 10 })
+                  .backgroundColor(this.isAnimating ? '#52C41A' : '#CCCCCC')
+                  .fontColor('#FFFFFF')
+                  .fontSize(12)
+                  .width(80)
+                  .height(45)
+                  .enabled(this.isAnimating)
+                
+                Button('重置')
+                  .onClick(() => this.resetAnimation())
+                  .backgroundColor('#FF4D4F')
+                  .fontColor('#FFFFFF')
+                  .fontSize(12)
+                  .width(80)
+                  .height(45)
+                
+                if (this.isAnimating) {
+                  Text(`步骤: ${this.currentStep}/${this.animationSteps.length}`)
+                    .fontSize(12)
+                    .margin({ left: 10 })
+                    .layoutWeight(1)
+                }
+              }
+              .width('100%')
+              .margin({ bottom: 10 })
+
               // 使用GraphVisualizer组件
               GraphVisualizer({
                 cityNames: this.cityNames,
                 allEdges: this.allEdges,
-                mstEdges: this.showResultPanel ? this.mstEdges : []
+                mstEdges: this.showResultPanel ? this.mstEdges : [],
+                isAnimating: this.isAnimating,
+                currentStep: this.currentStep
               })
-                .key(`graph-${this.refreshCounter}-${this.cityNames.length}-${this.allEdges.length}`)
-                .height(350)
+                .key(`graph-${this.refreshCounter}-${this.cityNames.length}-${this.allEdges.length}-${this.isAnimating}-${this.currentStep}`)
+                .height(450)
             }
             .width('100%')
           } else {
@@ -441,7 +561,7 @@ export struct AlgorithmDemo {
                 .fontColor('#1890FF')
               
               Blank()
-                .height(350)
+                .height(450)
             }
             .width('100%')
           }

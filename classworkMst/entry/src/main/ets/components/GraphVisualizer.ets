@@ -21,6 +21,8 @@ export struct GraphVisualizer {
   @Prop cityNames: string[] = [];
   @Prop allEdges: Edge[] = [];
   @Prop mstEdges: Edge[] = [];
+  @Prop isAnimating: boolean = false;
+  @Prop currentStep: number = 0;
   @Prop rejectedEdges: Edge[] = [];
   @Prop highlightedEdge: Edge | null = null;
 
@@ -52,8 +54,8 @@ export struct GraphVisualizer {
     const height = canvas.height;
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = Math.min(width, height) / 2 - 30;
-    const nodeRadius = 18;
+    const radius = Math.min(width, height) / 2 - 23;
+    const nodeRadius = 22;
 
     // 清空画布
     canvas.clearRect(0, 0, width, height);
@@ -62,19 +64,21 @@ export struct GraphVisualizer {
     this.calculateNodePosition(index, this.cityNames.length, centerX, centerY, radius)
     );
 
-    // 绘制所有边（灰色）
-    canvas.strokeStyle = '#CCCCCC';
-    canvas.lineWidth = 1;
-    if (this.allEdges) {
-      for (const edge of this.allEdges) {
-        if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
-          const fromPos = nodePositions[edge.from];
-          const toPos = nodePositions[edge.to];
+    // 绘制所有边（灰色）- 仅在非动画模式下显示
+    if (!this.isAnimating) {
+      canvas.strokeStyle = '#CCCCCC';
+      canvas.lineWidth = 1;
+      if (this.allEdges) {
+        for (const edge of this.allEdges) {
+          if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
+            const fromPos = nodePositions[edge.from];
+            const toPos = nodePositions[edge.to];
 
-          const path = new Path2D();
-          path.moveTo(fromPos.x, fromPos.y);
-          path.lineTo(toPos.x, toPos.y);
-          canvas.stroke(path);
+            const path = new Path2D();
+            path.moveTo(fromPos.x, fromPos.y);
+            path.lineTo(toPos.x, toPos.y);
+            canvas.stroke(path);
+          }
         }
       }
     }
@@ -96,11 +100,13 @@ export struct GraphVisualizer {
       }
     }
 
-    // 绘制MST边（绿色）
-    canvas.strokeStyle = '#00FF00';
-    canvas.lineWidth = 3;
-    if (this.mstEdges) {
-      for (const edge of this.mstEdges) {
+    // 根据动画状态绘制MST边
+    if (this.isAnimating && this.mstEdges.length > 0) {
+      // 绘制已添加的边（绿色）
+      canvas.strokeStyle = '#00FF00';
+      canvas.lineWidth = 3;
+      for (let i = 0; i < Math.min(this.currentStep, this.mstEdges.length); i++) {
+        const edge = this.mstEdges[i];
         if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
           const fromPos = nodePositions[edge.from];
           const toPos = nodePositions[edge.to];
@@ -109,6 +115,39 @@ export struct GraphVisualizer {
           path.moveTo(fromPos.x, fromPos.y);
           path.lineTo(toPos.x, toPos.y);
           canvas.stroke(path);
+        }
+      }
+
+      // 绘制当前正在添加的边（蓝色高亮）
+      if (this.currentStep < this.mstEdges.length) {
+        const currentEdge = this.mstEdges[this.currentStep];
+        if (currentEdge.from < nodePositions.length && currentEdge.to < nodePositions.length) {
+          const fromPos = nodePositions[currentEdge.from];
+          const toPos = nodePositions[currentEdge.to];
+
+          canvas.strokeStyle = '#0000FF';
+          canvas.lineWidth = 4;
+          const path = new Path2D();
+          path.moveTo(fromPos.x, fromPos.y);
+          path.lineTo(toPos.x, toPos.y);
+          canvas.stroke(path);
+        }
+      }
+    } else {
+      // 非动画模式下，绘制所有MST边（绿色）
+      canvas.strokeStyle = '#00FF00';
+      canvas.lineWidth = 3;
+      if (this.mstEdges) {
+        for (const edge of this.mstEdges) {
+          if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
+            const fromPos = nodePositions[edge.from];
+            const toPos = nodePositions[edge.to];
+
+            const path = new Path2D();
+            path.moveTo(fromPos.x, fromPos.y);
+            path.lineTo(toPos.x, toPos.y);
+            canvas.stroke(path);
+          }
         }
       }
     }
@@ -151,10 +190,7 @@ export struct GraphVisualizer {
       canvas.fillText(cityName && cityName.length > 3 ? cityName.substring(0, 3) : (cityName || ''), pos.x, pos.y);
       canvas.fillStyle = '#FFFFFF';
     }
-    this.refreshCounter = this.refreshCounter;//触发状态检查
   }
-
-
 
   aboutToAppear() {
     // 组件即将出现时，确保绘制最新的数据
@@ -169,7 +205,6 @@ export struct GraphVisualizer {
   aboutToUpdate() {
     // 当组件属性更新时，立即更新数据并重绘
     // 延迟绘制以确保属性已完全更新
-    this.refreshCounter++;
     setTimeout(() => {
       if (this.isCanvasReady) {
         this.drawGraph();
