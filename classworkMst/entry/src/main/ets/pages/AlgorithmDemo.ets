@@ -5,7 +5,6 @@ import { MatrixEditor } from '../components/MatrixEditor';
 import { GraphVisualizer } from '../components/GraphVisualizer';
 import { Graph } from '../model/Graph';
 import { CommonUtils } from '../utils/CommonUtils';
-import { FileStorage } from '../model/FileStorage';
 import promptAction from '@ohos.promptAction';
 interface Edge {
   from: number;
@@ -231,78 +230,6 @@ export struct AlgorithmDemo {
       });
     } catch (error) {
       const errorMessage: string = error instanceof Error ? error.message : '执行算法时发生错误';
-      promptAction.showToast({
-        message: errorMessage,
-        duration: 2000
-      });
-    }
-  }
-
-  // 保存图数据
-  private async saveGraph(): Promise<void> {
-    try {
-      const success: boolean = await FileStorage.saveGraph(this.cityNames, this.adjacencyMatrix);
-      if (success) {
-        promptAction.showToast({
-          message: '图数据已保存到本地存储',
-          duration: 2000
-        });
-      } else {
-        promptAction.showToast({
-          message: '图数据保存失败',
-          duration: 2000
-        });
-      }
-    } catch (error) {
-      const errorMessage: string = error instanceof Error ? error.message : '保存图数据时发生错误';
-      promptAction.showToast({
-        message: errorMessage,
-        duration: 2000
-      });
-    }
-  }
-
-  // 加载图数据
-  private async loadGraph(): Promise<void> {
-    try {
-      const data: GraphData | null = await FileStorage.loadGraph();
-      if (data) {
-        this.cityNames = data.cityNames || this.cityNames;
-        this.adjacencyMatrix = data.matrix || this.adjacencyMatrix;
-        this.graph.initialize(this.cityNames, this.adjacencyMatrix);
-        this.updateAllEdges();
-        this.showResultPanel = false;
-        this.startNodeValue = '0';
-        this.startNodeIndex = 0;
-        
-        // 清空MST结果
-        this.mstEdges = [];
-        
-        // 重置动画状态
-        this.isAnimating = false;
-        this.currentStep = 0;
-        this.animationSteps = [];
-        
-        // 强制刷新组件 - 通过显隐控制强制重新渲染
-        this.graphVisible = false;
-        
-        // 短暂延迟后重新显示，确保组件完全重建
-        setTimeout(() => {
-          this.graphVisible = true;
-        }, 50);
-
-        promptAction.showToast({
-          message: '图数据已从本地存储加载',
-          duration: 2000
-        });
-      } else {
-        promptAction.showToast({
-          message: '未找到保存的图数据',
-          duration: 2000
-        });
-      }
-    } catch (error) {
-      const errorMessage: string = error instanceof Error ? error.message : '加载图数据时发生错误';
       promptAction.showToast({
         message: errorMessage,
         duration: 2000

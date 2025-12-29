@@ -3,28 +3,17 @@
  */
 
 
-interface GeneratedTypeLiteralInterface_1 {
+interface EdgeListInterface {
   from: number;
   to: number;
   weight: number;
 }
 
-interface GeneratedTypeLiteralInterface_2 {
-  from: number;
-  to: number;
-  weight: number;
-}
-
-interface GeneratedTypeLiteralInterface_3 {
-  from: number;
-  to: number;
-  weight: number;
-}
 
 @Component
 export struct EdgeListPanel {
   // 边列表
-  private edges: GeneratedTypeLiteralInterface_1[] = [];
+  private edges: EdgeListInterface[] = [];
   // 城市名称列表
   private cityNames: string[] = [];
   // 总代价
@@ -33,7 +22,7 @@ export struct EdgeListPanel {
   private isVisible: boolean = true;
 
   // 设置边列表
-  setEdges(edges: GeneratedTypeLiteralInterface_2[]): void {
+  setEdges(edges: EdgeListInterface[]): void {
     this.edges = edges;
   }
 
@@ -68,7 +57,7 @@ export struct EdgeListPanel {
         // 边列表
         Scroll() {
           Column() {
-            ForEach(this.edges, (edge: GeneratedTypeLiteralInterface_3, index: number) => {
+            ForEach(this.edges, (edge: EdgeListInterface, index: number) => {
               Column() {
                 Row() {
                   Text(`${index + 1}.`)

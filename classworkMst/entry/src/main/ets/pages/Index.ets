@@ -2,7 +2,7 @@
  * 应用主入口，使用Tabs实现底部导航
  */
 import {AlgorithmDemo} from './AlgorithmDemo';
-import RealMap from './RealMap';
+import { CitiesMap } from './CitiesMap';
 
 @Entry
 @Component
@@ -20,7 +20,7 @@ struct Index {
         
         // 真实地图页面 (Index 1)
         if (this.currentIndex === 1) {
-          RealMap()
+          CitiesMap()
         }
       }
       .layoutWeight(1)
@@ -73,7 +73,7 @@ struct Index {
             })
             .margin({ bottom: 8 })
 
-          Text('真实地图')
+          Text('城市地图')
             .fontColor(this.currentIndex === 1 ? '#007DFF' : '#999999')
             .fontSize(12)
             .fontWeight(FontWeight.Bold)
