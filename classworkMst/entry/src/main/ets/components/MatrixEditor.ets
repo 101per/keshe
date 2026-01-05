@@ -86,13 +86,18 @@ export struct MatrixEditor {
                     return;
                   }
 
-                  const numValue = value === '' || value === '-' ? Infinity : Number(value);
+                  let numValue: number;
+                  // 核心：识别无穷大符号和空输入
+                  if (value === '' || value === '-' || value === '∞') {
+                    numValue = Infinity;
+                  } else {
+                    numValue = Number(value);
+                  }
 
-                  if (!isNaN(numValue) || numValue === Infinity) {
-                    // 创建新矩阵副本，确保引用变化
+                  if (!isNaN(numValue)) { // 确保是合法数字或 Infinity
                     const newMatrix = this.matrix.map(r => [...r]);
                     newMatrix[rowIndex][colIndex] = numValue;
-                    newMatrix[colIndex][rowIndex] = numValue;
+                    newMatrix[colIndex][rowIndex] = numValue; // 保持对称
 
                     if (this.onChange) {
                       this.onChange(newMatrix);

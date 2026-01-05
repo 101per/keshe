@@ -33,21 +33,24 @@ export struct GraphVisualizer {
 
   private drawGraph(): void {
     const ctx = this.canvasContext;
+    // 增加对 ctx 尺寸的判断，如果宽高为 0，说明还没准备好
     if (!ctx || !this.cityNames || this.cityNames.length === 0) return;
 
-    // 获取当前 Canvas 实际宽高
+    // 获取实际渲染宽度，如果没有则给定默认值或跳过本次绘制
     const w = ctx.width;
     const h = ctx.height;
+    if (w <= 0 || h <= 0) return;
 
-    // 清除画布
     ctx.clearRect(0, 0, w, h);
 
     const centerX = w / 2;
     const centerY = h / 2;
-    const radius = Math.min(w, h) / 2 - 30;
+    // 增加边距系数，确保节点不会贴边
+    const radius = Math.min(w, h) / 2 - 40;
 
-    // 1. 计算所有节点位置
+    // 1. 计算位置 (确保计算逻辑绝对幂等)
     const nodePositions: Point[] = this.cityNames.map((_, i) => {
+      // 固定的角度起始点：-Math.PI / 2 确保第一个城市在正上方
       const angle = (2 * Math.PI * i) / this.cityNames.length - Math.PI / 2;
       return {
         x: centerX + radius * Math.cos(angle),

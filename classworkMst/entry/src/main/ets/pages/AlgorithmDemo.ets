@@ -109,7 +109,11 @@ export struct AlgorithmDemo {
     if (this.savedFiles.length === 0) return [{ value: '暂无文件', action: () => {} }];
     return this.savedFiles.map(name => ({
       value: name,
-      action: () => { this.importFileName = name; }
+      action: () => {
+        this.importFileName = name;
+        // 可选：选择后直接触发加载
+        // this.loadGraph();
+      }
     } as MenuOption));
   }
 
@@ -275,26 +279,61 @@ export struct AlgorithmDemo {
 
   // --- 原有文件保存/导入逻辑 ---
   private async saveGraph() {
+    let fileName = this.importFileName.trim();
+    if (!fileName) {
+      promptAction.showToast({ message: '请输入文件名' });
+      return;
+    }
+
+    if (!fileName.endsWith('.json')) {
+      fileName += '.json';
+    }
+
+    // --- 关键修复：深拷贝当前状态矩阵 ---
+    // 使用 map 确保每一行都是新数组，避免引用污染
+    const matrixSnapshot = this.adjacencyMatrix.map(row => [...row]);
+    const citySnapshot = [...this.cityNames];
+
+    // 重新初始化 graph 确保它持有的是这份快照
+    this.graph.initialize(citySnapshot, matrixSnapshot);
+
     const context = getContext(this) as common.UIAbilityContext;
-    const name = this.importFileName || `graph_${Date.now()}.json`;
-    const success = await FileUtils.saveGraphToFile(context, this.graph, name);
+    const success = await FileUtils.saveGraphToFile(context, this.graph, fileName);
+
     if (success) {
+      this.importFileName = fileName;
       this.refreshFileList();
-      promptAction.showToast({ message: '保存成功: ' + name });
+      promptAction.showToast({ message: '保存成功' });
     }
   }
 
   private async loadGraph() {
-    const context = getContext(this) as common.UIAbilityContext;
-    const data = await FileUtils.loadGraphFromFile(context, this.importFileName);
+    const data = await FileUtils.loadGraphFromFile(getContext(this), this.importFileName);
     if (data) {
+      this.graphVisible = false;
+
+      // 1. 数据清洗：将 JSON 中的 null 还原回 Infinity
+      const cleanedMatrix = data.matrix.map(row =>
+      row.map(cell => (cell === null ? Infinity : cell))
+      );
+
+      // 2. 状态重置
       this.cityNames = [...data.cityNames];
-      this.adjacencyMatrix = data.matrix.map(row => [...row]);
-      this.graph.initialize(this.cityNames, this.adjacencyMatrix);
-      this.updateAllEdges();
+      this.adjacencyMatrix = cleanedMatrix;
+
+      // 3. 立即重算所有的边
+      this.updateAllEdges(); // 这个函数内部会过滤掉 Infinity
       this.resetMSTStates();
-      this.triggerGraphRefresh();
-      promptAction.showToast({ message: '数据导入成功' });
+
+      // 4. 重建模型
+      this.graph = new Graph();
+      this.graph.initialize(this.cityNames, this.adjacencyMatrix);
+
+      // 5. 强制刷新组件
+      this.refreshKey++;
+      setTimeout(() => {
+        this.graphVisible = true;
+      }, 50);
     }
   }
 }

@@ -13,22 +13,23 @@ export class FileUtils {
    */
   static async saveGraphToFile(context: common.Context, graph: Graph, fileName: string): Promise<boolean> {
     try {
-      const filePath = `${context.filesDir}/${fileName}`;
+      const finalName = fileName.endsWith('.json') ? fileName : `${fileName}.json`;
+      const filePath = `${context.filesDir}/${finalName}`;
+
+      // 显式提取数据，确保不包含循环引用或多余对象属性
       const graphData: GraphData = {
-        cityNames: graph.getCityNames(),
-        matrix: graph.getAdjacencyMatrix()
+        cityNames: [...graph.getCityNames()],
+        matrix: graph.getAdjacencyMatrix().map(row => [...row])
       };
+
       const jsonString = JSON.stringify(graphData);
 
-      // 使用 CREATE 和 READ_WRITE 模式打开
-      const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
-      // 显式清空文件内容，解决 TRUNCATE 报错问题
-      fs.truncateSync(file.fd);
+      const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
       fs.writeSync(file.fd, jsonString);
       fs.closeSync(file.fd);
       return true;
     } catch (error) {
-      console.error('FileUtils: Save failed', JSON.stringify(error));
+      console.error('FileUtils Error:', error);
       return false;
     }
   }
