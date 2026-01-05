@@ -110,9 +110,14 @@ export class CommonUtils {
    * @param value 数字值
    * @returns 格式化后的字符串
    */
-  static formatNumber(value: number): string {
+  static formatNumber(value: number | null | undefined): string {
+    // 增加对 null 和 undefined 的防御
+    if (value === null || value === undefined) {
+      return "";
+    }
+    // 处理无穷大（图算法中常见）
     if (value === Infinity) {
-      return "-";
+      return "∞";
     }
     return value.toString();
   }

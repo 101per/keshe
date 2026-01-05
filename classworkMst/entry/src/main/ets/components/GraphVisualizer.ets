@@ -1,15 +1,10 @@
-/**
- * 简单圆形布局的节点+边可视化组件
- */
-
-// 定义边的接口
+// 定义内部接口，确保类型安全
 interface Edge {
   from: number;
   to: number;
   weight: number;
 }
 
-// 定义点的接口
 interface Point {
   x: number;
   y: number;
@@ -17,215 +12,114 @@ interface Point {
 
 @Component
 export struct GraphVisualizer {
-  // 使用 @Prop 装饰器
-  @Prop cityNames: string[] = [];
-  @Prop allEdges: Edge[] = [];
-  @Prop mstEdges: Edge[] = [];
-  @Prop isAnimating: boolean = false;
-  @Prop currentStep: number = 0;
-  @Prop rejectedEdges: Edge[] = [];
-  @Prop highlightedEdge: Edge | null = null;
+  // 必须使用 @Prop 接收外部传入的属性
+  @Prop @Watch('onDataChange') cityNames: string[] = [];
+  @Prop @Watch('onDataChange') allEdges: Edge[] = [];
+  @Prop @Watch('onDataChange') mstEdges: Edge[] = [];
+  @Prop @Watch('onDataChange') isAnimating: boolean = false;
+  @Prop @Watch('onDataChange') currentStep: number = 0;
 
-  // Canvas 上下文
-  private canvasContext: CanvasRenderingContext2D = new CanvasRenderingContext2D();
-  // 标记 Canvas 是否已准备就绪
+  // --- 修正点 1：Canvas 上下文的正确初始化方式 ---
+  private settings: RenderingContextSettings = new RenderingContextSettings(true);
+  private canvasContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
   private isCanvasReady: boolean = false;
-  // 用于触发重绘的状态
-  @State refreshCounter: number = 0;
 
-  // 计算节点在圆形布局中的位置
-  private calculateNodePosition(index: number, total: number, centerX: number, centerY: number,
-    radius: number): Point {
-    const angle = (2 * Math.PI * index) / total - Math.PI / 2;
-    return {
-      x: centerX + radius * Math.cos(angle),
-      y: centerY + radius * Math.sin(angle)
-    };
-  }
-
-  // 绘制图形
-  private drawGraph(): void {
-    const canvas = this.canvasContext;
-    if (!canvas || !this.cityNames || this.cityNames.length === 0) {
-      return;
-    }
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) / 2 - 23;
-    const nodeRadius = 22;
-
-    // 清空画布
-    canvas.clearRect(0, 0, width, height);
-
-    const nodePositions = this.cityNames.map((_, index) =>
-    this.calculateNodePosition(index, this.cityNames.length, centerX, centerY, radius)
-    );
-
-    // 绘制所有边（灰色）- 仅在非动画模式下显示
-    if (!this.isAnimating) {
-      canvas.strokeStyle = '#CCCCCC';
-      canvas.lineWidth = 1;
-      if (this.allEdges) {
-        for (const edge of this.allEdges) {
-          if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
-            const fromPos = nodePositions[edge.from];
-            const toPos = nodePositions[edge.to];
-
-            const path = new Path2D();
-            path.moveTo(fromPos.x, fromPos.y);
-            path.lineTo(toPos.x, toPos.y);
-            canvas.stroke(path);
-          }
-        }
-      }
-    }
-
-    // 绘制拒绝的边（红色）
-    canvas.strokeStyle = '#FF0000';
-    canvas.lineWidth = 2;
-    if (this.rejectedEdges) {
-      for (const edge of this.rejectedEdges) {
-        if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
-          const fromPos = nodePositions[edge.from];
-          const toPos = nodePositions[edge.to];
-
-          const path = new Path2D();
-          path.moveTo(fromPos.x, fromPos.y);
-          path.lineTo(toPos.x, toPos.y);
-          canvas.stroke(path);
-        }
-      }
-    }
-
-    // 根据动画状态绘制MST边
-    if (this.isAnimating && this.mstEdges.length > 0) {
-      // 绘制已添加的边（绿色）
-      canvas.strokeStyle = '#00FF00';
-      canvas.lineWidth = 3;
-      for (let i = 0; i < Math.min(this.currentStep, this.mstEdges.length); i++) {
-        const edge = this.mstEdges[i];
-        if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
-          const fromPos = nodePositions[edge.from];
-          const toPos = nodePositions[edge.to];
-
-          const path = new Path2D();
-          path.moveTo(fromPos.x, fromPos.y);
-          path.lineTo(toPos.x, toPos.y);
-          canvas.stroke(path);
-        }
-      }
-
-      // 绘制当前正在添加的边（蓝色高亮）
-      if (this.currentStep < this.mstEdges.length) {
-        const currentEdge = this.mstEdges[this.currentStep];
-        if (currentEdge.from < nodePositions.length && currentEdge.to < nodePositions.length) {
-          const fromPos = nodePositions[currentEdge.from];
-          const toPos = nodePositions[currentEdge.to];
-
-          canvas.strokeStyle = '#0000FF';
-          canvas.lineWidth = 4;
-          const path = new Path2D();
-          path.moveTo(fromPos.x, fromPos.y);
-          path.lineTo(toPos.x, toPos.y);
-          canvas.stroke(path);
-        }
-      }
-    } else {
-      // 非动画模式下，绘制所有MST边（绿色）
-      canvas.strokeStyle = '#00FF00';
-      canvas.lineWidth = 3;
-      if (this.mstEdges) {
-        for (const edge of this.mstEdges) {
-          if (edge.from < nodePositions.length && edge.to < nodePositions.length) {
-            const fromPos = nodePositions[edge.from];
-            const toPos = nodePositions[edge.to];
-
-            const path = new Path2D();
-            path.moveTo(fromPos.x, fromPos.y);
-            path.lineTo(toPos.x, toPos.y);
-            canvas.stroke(path);
-          }
-        }
-      }
-    }
-
-    // 绘制高亮边（蓝色）
-    if (this.highlightedEdge) {
-      canvas.strokeStyle = '#0000FF';
-      canvas.lineWidth = 4;
-      if (this.highlightedEdge.from < nodePositions.length && this.highlightedEdge.to < nodePositions.length) {
-        const fromPos = nodePositions[this.highlightedEdge.from];
-        const toPos = nodePositions[this.highlightedEdge.to];
-
-        const path = new Path2D();
-        path.moveTo(fromPos.x, fromPos.y);
-        path.lineTo(toPos.x, toPos.y);
-        canvas.stroke(path);
-      }
-    }
-
-    // 绘制节点
-    canvas.fillStyle = '#FFFFFF';
-    canvas.strokeStyle = '#000000';
-    canvas.lineWidth = 2;
-
-    for (let i = 0; i < this.cityNames.length; i++) {
-      const pos = nodePositions[i];
-
-      // 绘制节点圆形
-      const path = new Path2D();
-      path.arc(pos.x, pos.y, nodeRadius, 0, 2 * Math.PI);
-      canvas.fill(path);
-      canvas.stroke(path);
-
-      // 绘制节点标签
-      canvas.fillStyle = '#000000';
-      canvas.font = '10px sans-serif';
-      canvas.textAlign = 'center';
-      canvas.textBaseline = 'middle';
-      const cityName = this.cityNames[i];
-      canvas.fillText(cityName && cityName.length > 3 ? cityName.substring(0, 3) : (cityName || ''), pos.x, pos.y);
-      canvas.fillStyle = '#FFFFFF';
-    }
-  }
-
-  aboutToAppear() {
-    // 组件即将出现时，确保绘制最新的数据
-    // 延迟绘制以确保属性已更新
-    setTimeout(() => {
-      if (this.isCanvasReady) {
-        this.drawGraph();
-      }
-    }, 10);
-  }
-
-  aboutToUpdate() {
-    // 当组件属性更新时，立即更新数据并重绘
-    // 延迟绘制以确保属性已完全更新
-    setTimeout(() => {
-      if (this.isCanvasReady) {
-        this.drawGraph();
-      }
-    }, 10);
-  }
-
-  updateState(cityNames: string[], allEdges: Edge[], mstEdges: Edge[], rejectedEdges: Edge[], highlightedEdge: Edge | null) {
-    this.cityNames = cityNames;
-    this.allEdges = allEdges;
-    this.mstEdges = mstEdges;
-    this.rejectedEdges = rejectedEdges;
-    this.highlightedEdge = highlightedEdge;
-    
+  // 监听属性变化
+  onDataChange() {
     if (this.isCanvasReady) {
       this.drawGraph();
     }
   }
 
+  private drawGraph(): void {
+    const ctx = this.canvasContext;
+    if (!ctx || !this.cityNames || this.cityNames.length === 0) return;
+
+    // 获取当前 Canvas 实际宽高
+    const w = ctx.width;
+    const h = ctx.height;
+
+    // 清除画布
+    ctx.clearRect(0, 0, w, h);
+
+    const centerX = w / 2;
+    const centerY = h / 2;
+    const radius = Math.min(w, h) / 2 - 30;
+
+    // 1. 计算所有节点位置
+    const nodePositions: Point[] = this.cityNames.map((_, i) => {
+      const angle = (2 * Math.PI * i) / this.cityNames.length - Math.PI / 2;
+      return {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
+      } as Point;
+    });
+
+    // 2. 绘制基础边 (allEdges) - 浅灰色
+    ctx.strokeStyle = '#E8E8E8';
+    ctx.lineWidth = 1;
+    this.allEdges.forEach(edge => {
+      this.drawLine(ctx, nodePositions, edge);
+    });
+
+    // 3. 绘制生成树边 (根据动画状态)
+    if (this.isAnimating) {
+      // 动画模式：绘制 0 到 currentStep-1 的边
+      ctx.strokeStyle = '#52C41A'; // 绿色
+      ctx.lineWidth = 3;
+      for (let i = 0; i < this.currentStep; i++) {
+        if (this.mstEdges[i]) {
+          this.drawLine(ctx, nodePositions, this.mstEdges[i]);
+        }
+      }
+      // 绘制当前正在闪烁/高亮的边 (蓝色)
+      if (this.currentStep < this.mstEdges.length) {
+        ctx.strokeStyle = '#1890FF';
+        ctx.lineWidth = 5;
+        this.drawLine(ctx, nodePositions, this.mstEdges[this.currentStep]);
+      }
+    } else if (this.mstEdges.length > 0) {
+      // 静态结果模式
+      ctx.strokeStyle = '#52C41A';
+      ctx.lineWidth = 3;
+      this.mstEdges.forEach(edge => {
+        this.drawLine(ctx, nodePositions, edge);
+      });
+    }
+
+    // 4. 绘制节点
+    nodePositions.forEach((pos, i) => {
+      // 节点背景
+      ctx.beginPath();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.arc(pos.x, pos.y, 20, 0, 2 * Math.PI);
+      ctx.fill();
+      // 节点边框
+      ctx.strokeStyle = '#333333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // 节点文字
+      ctx.fillStyle = '#333333';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // 截取前3个字符防止溢出
+      const name = this.cityNames[i] ? this.cityNames[i].substring(0, 3) : '';
+      ctx.fillText(name, pos.x, pos.y);
+    });
+  }
+
+  // 封装画线逻辑
+  private drawLine(ctx: CanvasRenderingContext2D, pos: Point[], edge: Edge) {
+    if (!edge || edge.from >= pos.length || edge.to >= pos.length) return;
+    ctx.beginPath();
+    ctx.moveTo(pos[edge.from].x, pos[edge.from].y);
+    ctx.lineTo(pos[edge.to].x, pos[edge.to].y);
+    ctx.stroke();
+  }
+
   build() {
-    Column() {
+    Stack() {
       Canvas(this.canvasContext)
         .width('100%')
         .height('100%')
@@ -233,10 +127,6 @@ export struct GraphVisualizer {
           this.isCanvasReady = true;
           this.drawGraph();
         })
-        .onSizeChange(() => {
-          this.drawGraph();
-        })
-        .key(`canvas-${this.refreshCounter}`) // 使用 refreshCounter 确保 Canvas 重新渲染
     }
     .width('100%')
     .height('100%')

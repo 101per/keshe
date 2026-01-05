@@ -3,6 +3,7 @@
  */
 import {AlgorithmDemo} from './AlgorithmDemo';
 import { CitiesMap } from './CitiesMap';
+import { RealMap } from './RealMap';
 
 @Entry
 @Component
@@ -18,9 +19,14 @@ struct Index {
           AlgorithmDemo()
         }
         
-        // 真实地图页面 (Index 1)
+        // 城市地图页面 (Index 1)
         if (this.currentIndex === 1) {
           CitiesMap()
+        }
+
+        // 真实地图页面 (Index 2)
+        if (this.currentIndex === 2) {
+          RealMap()
         }
       }
       .layoutWeight(1)
@@ -61,7 +67,7 @@ struct Index {
         .alignItems(HorizontalAlign.Center)
         .height('100%')
 
-        // 真实地图 tab
+        // 城市地图 tab
         Column() {
           Image(this.currentIndex === 1 ? $r('app.media.icon_map2') : $r('app.media.icon_map1'))
             .width(24)
@@ -80,6 +86,30 @@ struct Index {
         }
         .onClick(() => {
           this.currentIndex = 1;
+        })
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .height('100%')
+        // 真实地图 tab
+        Column() {
+          Image(this.currentIndex === 2 ? $r('app.media.icon_realMap2') : $r('app.media.icon_realMap1'))
+            .width(24)
+            .height(24)
+            .scale({ x: this.currentIndex === 2 ? 1.3 : 1.0, y: this.currentIndex === 2 ? 1.3 : 1.0 })
+            .animation({
+              duration: 300,
+              curve: Curve.EaseInOut
+            })
+            .margin({ bottom: 8 })
+
+          Text('真实地图')
+            .fontColor(this.currentIndex === 2 ? '#007DFF' : '#999999')
+            .fontSize(12)
+            .fontWeight(FontWeight.Bold)
+        }
+        .onClick(() => {
+          this.currentIndex = 2;
         })
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
